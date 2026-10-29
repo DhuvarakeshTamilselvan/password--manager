@@ -22,10 +22,23 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Check Environment') {
             steps {
                 bat 'python --version'
+                bat 'git --version'
+                bat '"%DOCKER_EXE%" --version'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
                 bat 'python -m pip install -r requirements.txt'
+            }
+        }
+
+        stage('Check Docker Engine') {
+            steps {
+                bat '"%DOCKER_EXE%" info'
             }
         }
 
@@ -37,13 +50,21 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKERHUB_USER',
-                    passwordVariable: 'DOCKERHUB_TOKEN'
-                )]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKERHUB_USER',
+                        passwordVariable: 'DOCKERHUB_TOKEN'
+                    )
+                ]) {
                     bat '''@echo off
-"%DOCKER_EXE%" login -u %DOCKERHUB_USER% --password-stdin < nul
+echo %DOCKERHUB_TOKEN%| "%DOCKER_EXE%" login -u "%DOCKERHUB_USER%" --password-stdin
+if errorlevel 1 exit /b 1
+
+"%DOCKER_EXE%" push %IMAGE_NAME%:%VERSION%
+if errorlevel 1 exit /b 1
+
+"%DOCKER_EXE%" logout
 '''
                 }
             }
@@ -52,10 +73,15 @@ pipeline {
 
     post {
         success {
-            echo 'Password Manager image built successfully.'
+            echo 'SUCCESS: Password Manager image built and pushed to Docker Hub.'
         }
+
         failure {
-            echo 'Pipeline failed. Check Console Output.'
+            echo 'FAILED: Check the Console Output for the failed stage.'
+        }
+
+        always {
+            echo 'Password Manager Jenkins pipeline execution completed.'
         }
     }
 }
