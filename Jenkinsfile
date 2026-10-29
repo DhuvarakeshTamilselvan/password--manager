@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -5,13 +6,12 @@ pipeline {
         choice(
             name: 'VERSION',
             choices: ['v1', 'v2', 'v3'],
-            description: 'Choose the Password Manager version to build'
+            description: 'Select Password Manager version'
         )
     }
 
     environment {
-        // Replace with your Docker Hub username/repository.
-        IMAGE_NAME = 'YOUR_DOCKERHUB_USERNAME/password-manager'
+        IMAGE_NAME = 'dhuvarakesh529/password-manager'
     }
 
     stages {
@@ -23,13 +23,14 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh 'python3 -m pip install -r requirements.txt'
+                bat 'python --version'
+                bat 'python -m pip install -r requirements.txt'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build --build-arg VERSION=${VERSION} -t ${IMAGE_NAME}:${VERSION} .'
+                bat 'docker build --build-arg VERSION=%VERSION% -t %IMAGE_NAME%:%VERSION% .'
             }
         }
 
@@ -40,25 +41,24 @@ pipeline {
                     usernameVariable: 'DOCKERHUB_USER',
                     passwordVariable: 'DOCKERHUB_TOKEN'
                 )]) {
-                    sh '''
-                        echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
-                        docker push "${IMAGE_NAME}:${VERSION}"
-                        docker logout
-                    '''
+                    bat '''@echo off
+echo %DOCKERHUB_TOKEN% | docker login -u %DOCKERHUB_USER% --password-stdin
+if errorlevel 1 exit /b 1
+docker push %IMAGE_NAME%:%VERSION%
+if errorlevel 1 exit /b 1
+docker logout
+'''
                 }
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh 'kubectl apply -f k8s/${VERSION}.yaml'
             }
         }
     }
 
     post {
-        always {
-            echo 'Password Manager pipeline finished.'
+        success {
+            echo 'Password Manager image built and pushed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Check Console Output for the failing stage.'
         }
     }
 }
