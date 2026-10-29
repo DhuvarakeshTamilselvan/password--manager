@@ -11,7 +11,7 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME = 'dhuvarakesh529/password-manager'
+        IMAGE_NAME = 'password-manager'
         DOCKER_EXE = 'C:\\Users\\prana\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
     }
 
@@ -22,7 +22,7 @@ pipeline {
             }
         }
 
-        stage('Check Environment') {
+        stage('Check Tools') {
             steps {
                 bat 'python --version'
                 bat 'git --version'
@@ -47,41 +47,14 @@ pipeline {
                 bat '"%DOCKER_EXE%" build --build-arg VERSION=%VERSION% -t %IMAGE_NAME%:%VERSION% .'
             }
         }
-
-        stage('Push to Docker Hub') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'DOCKERHUB_USER',
-                        passwordVariable: 'DOCKERHUB_TOKEN'
-                    )
-                ]) {
-                    bat '''@echo off
-echo %DOCKERHUB_TOKEN%| "%DOCKER_EXE%" login -u "%DOCKERHUB_USER%" --password-stdin
-if errorlevel 1 exit /b 1
-
-"%DOCKER_EXE%" push %IMAGE_NAME%:%VERSION%
-if errorlevel 1 exit /b 1
-
-"%DOCKER_EXE%" logout
-'''
-                }
-            }
-        }
     }
 
     post {
         success {
-            echo 'SUCCESS: Password Manager image built and pushed to Docker Hub.'
+            echo 'SUCCESS: Password Manager Docker image built.'
         }
-
         failure {
-            echo 'FAILED: Check the Console Output for the failed stage.'
-        }
-
-        always {
-            echo 'Password Manager Jenkins pipeline execution completed.'
+            echo 'FAILED: Check Console Output for the failing stage.'
         }
     }
 }
