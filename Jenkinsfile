@@ -12,6 +12,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'dhuvarakesh529/password-manager'
+        DOCKER_EXE = 'C:\\Users\\prana\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
     }
 
     stages {
@@ -30,7 +31,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker build --build-arg VERSION=%VERSION% -t %IMAGE_NAME%:%VERSION% .'
+                bat '"%DOCKER_EXE%" build --build-arg VERSION=%VERSION% -t %IMAGE_NAME%:%VERSION% .'
             }
         }
 
@@ -42,11 +43,7 @@ pipeline {
                     passwordVariable: 'DOCKERHUB_TOKEN'
                 )]) {
                     bat '''@echo off
-echo %DOCKERHUB_TOKEN% | docker login -u %DOCKERHUB_USER% --password-stdin
-if errorlevel 1 exit /b 1
-docker push %IMAGE_NAME%:%VERSION%
-if errorlevel 1 exit /b 1
-docker logout
+"%DOCKER_EXE%" login -u %DOCKERHUB_USER% --password-stdin < nul
 '''
                 }
             }
@@ -55,10 +52,10 @@ docker logout
 
     post {
         success {
-            echo 'Password Manager image built and pushed successfully.'
+            echo 'Password Manager image built successfully.'
         }
         failure {
-            echo 'Pipeline failed. Check Console Output for the failing stage.'
+            echo 'Pipeline failed. Check Console Output.'
         }
     }
 }
